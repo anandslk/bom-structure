@@ -113,7 +113,7 @@ export const App: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "calc(100vh - 150px)",
+          minHeight: "calc(100vh - 200px)",
         }}
       >
         {!submitted ? (
@@ -129,8 +129,6 @@ export const App: React.FC = () => {
             <Stack spacing={3}>
               <TextField
                 label="Parent Parts to Assign"
-                multiline
-                rows={4}
                 variant="outlined"
                 value={parentParts}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
