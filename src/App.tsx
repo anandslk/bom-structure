@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 import {
   Autocomplete,
   TextField,
@@ -10,6 +10,7 @@ import {
   Typography,
   AppBar,
   Toolbar,
+  LinearProgress,
 } from "@mui/material";
 
 interface FormErrors {
@@ -52,6 +53,8 @@ const options1: string[] = [
 
 const options2: string[] = [...options1];
 
+type Stage = "form" | "searching" | "confirmation" | "assigning" | "results";
+
 export const App: React.FC = () => {
   // Form fields and error state
   const [parentParts, setParentParts] = useState<string>("");
@@ -61,31 +64,65 @@ export const App: React.FC = () => {
     sourceOrg: false,
   });
 
-  // State for multi-select items (lifted from DropdownMultiSelect)
+  // State for multi-select items
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  // Track submission state to toggle view
-  const [submitted, setSubmitted] = useState<boolean>(false);
+  // Track submission stage
+  const [stage, setStage] = useState<Stage>("form");
 
-  const handleSubmit = (): void => {
+  // --- Form Submission ---
+  const handleFormSubmit = (): void => {
     const newErrors: FormErrors = {
       parentParts: parentParts.trim() === "",
       sourceOrg: sourceOrg.trim() === "",
     };
     setErrors(newErrors);
     if (!newErrors.parentParts && !newErrors.sourceOrg) {
-      console.log("Form submitted:", { parentParts, sourceOrg, selectedItems });
-      setSubmitted(true);
+      setStage("searching");
     }
   };
 
+  // --- Searching Stage ---
+  useEffect(() => {
+    let timer: any;
+    if (stage === "searching") {
+      timer = setTimeout(() => {
+        setStage("confirmation");
+      }, 2000);
+    }
+    return () => clearTimeout(timer);
+  }, [stage]);
+
+  // --- Cancel Handler ---
   const handleCancel = (): void => {
     setParentParts("");
     setSourceOrg("");
     setErrors({ parentParts: false, sourceOrg: false });
     setSelectedItems([]);
-    console.log("Form cancelled");
+    setStage("form");
+    console.log("Process cancelled");
   };
+
+  // --- Confirmation Stage ---
+  const handleConfirmationSubmit = (): void => {
+    setStage("assigning");
+  };
+
+  // --- Assigning Stage ---
+  useEffect(() => {
+    let timer: any;
+    if (stage === "assigning") {
+      timer = setTimeout(() => {
+        setStage("results");
+        console.log("Final submission:", {
+          parentParts,
+          sourceOrg,
+          selectedItems,
+        });
+      }, 2000);
+    }
+    return () => clearTimeout(timer);
+  }, [stage, parentParts, sourceOrg, selectedItems]);
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#eef2f6" }}>
@@ -111,12 +148,19 @@ export const App: React.FC = () => {
         sx={{
           padding: 4,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          gap: 4,
           minHeight: "calc(100vh - 200px)",
         }}
       >
-        {!submitted ? (
+        {/* Loader for Searching Stage */}
+        {stage === "searching" && (
+          <LoadingScreen message="Searching for parts..." />
+        )}
+
+        {/* Show form if stage is "form" or "searching" */}
+        {(stage === "form" || stage === "searching") && (
           <Paper
             sx={{
               padding: 4,
@@ -124,6 +168,7 @@ export const App: React.FC = () => {
               maxWidth: 600,
               borderRadius: 4,
               boxShadow: 3,
+              opacity: stage === "searching" ? 0.6 : 1,
             }}
           >
             <Stack spacing={3}>
@@ -137,6 +182,7 @@ export const App: React.FC = () => {
                 error={errors.parentParts}
                 helperText={errors.parentParts ? "This field is required" : ""}
                 fullWidth
+                disabled={stage === "searching"}
               />
               <TextField
                 label="Source Organization"
@@ -148,18 +194,21 @@ export const App: React.FC = () => {
                 error={errors.sourceOrg}
                 helperText={errors.sourceOrg ? "This field is required" : ""}
                 fullWidth
+                disabled={stage === "searching"}
               />
 
               <DropdownMultiSelect
                 selectedItems={selectedItems}
                 onChange={setSelectedItems}
+                disabled={stage === "searching"}
               />
 
               <Stack direction="row" spacing={2} justifyContent="flex-end">
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={handleSubmit}
+                  onClick={handleFormSubmit}
+                  disabled={stage === "searching"}
                 >
                   Submit
                 </Button>
@@ -167,18 +216,41 @@ export const App: React.FC = () => {
                   variant="outlined"
                   color="secondary"
                   onClick={handleCancel}
+                  disabled={stage === "searching"}
                 >
                   Cancel
                 </Button>
               </Stack>
             </Stack>
           </Paper>
-        ) : (
-          <SubmittedDetails
+        )}
+
+        {/* Loader for Assigning Stage (same style as Searching Stage) */}
+        {stage === "assigning" && (
+          <LoadingScreen message="Assigning items and commoning required parts..." />
+        )}
+
+        {/* Confirmation Screen */}
+        {(stage === "confirmation" || stage === "assigning") && (
+          <ConfirmationScreen
+            stage={stage}
+            parentParts={parentParts}
+            sourceOrg={sourceOrg}
+            destOrg="AY5"
+            partsProcessed="575757-676"
+            selectedItems={selectedItems}
+            onSubmit={handleConfirmationSubmit}
+            onCancel={handleCancel}
+          />
+        )}
+
+        {/* Results Screen */}
+        {stage === "results" && (
+          <ResultsScreen
             parentParts={parentParts}
             sourceOrg={sourceOrg}
             selectedItems={selectedItems}
-            onBack={() => setSubmitted(false)}
+            onBack={handleCancel}
           />
         )}
       </Box>
@@ -191,11 +263,13 @@ export default App;
 interface DropdownProps {
   selectedItems: string[];
   onChange: (items: string[]) => void;
+  disabled: boolean;
 }
 
 const DropdownMultiSelect: React.FC<DropdownProps> = ({
   selectedItems,
   onChange,
+  disabled,
 }) => {
   const [firstDropdownSelected, setFirstDropdownSelected] =
     useState<boolean>(false);
@@ -229,6 +303,7 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
             label="JDI RDO List"
             fullWidth
             variant="outlined"
+            disabled={disabled}
           />
         )}
       />
@@ -241,9 +316,9 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
             label="Select an Org"
             fullWidth
             variant="outlined"
+            disabled={disabled || !firstDropdownSelected}
           />
         )}
-        disabled={!firstDropdownSelected}
       />
       <Paper
         sx={{
@@ -255,7 +330,7 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
         }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-          Mapped Parent Parts & Organizations
+          Selected Plants
         </Typography>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
           {selectedItems.map((item) => (
@@ -272,14 +347,147 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
   );
 };
 
-interface SubmittedDetailsProps {
+interface LoadingScreenProps {
+  message: string;
+}
+
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
+  return (
+    <Paper
+      sx={{
+        padding: 4,
+        width: "100%",
+        maxWidth: 600,
+        borderRadius: 4,
+        boxShadow: 3,
+        textAlign: "center",
+        backgroundColor: "#f5f5f5",
+        border: "2px solid #3f51b5",
+      }}
+    >
+      <Box sx={{ marginBottom: 2 }}>
+        <Typography variant="h6" color="primary" fontWeight="bold">
+          {message}
+        </Typography>
+      </Box>
+      <LinearProgress color="primary" />
+    </Paper>
+  );
+};
+
+interface ConfirmationScreenProps {
+  stage: string;
+  parentParts: string;
+  sourceOrg: string;
+  destOrg: string;
+  partsProcessed: string;
+  selectedItems: string[];
+  onSubmit: () => void;
+  onCancel: () => void;
+}
+
+const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
+  parentParts,
+  sourceOrg,
+
+  onSubmit,
+  onCancel,
+  stage,
+  destOrg,
+  partsProcessed,
+}) => {
+  return (
+    <Paper
+      sx={{
+        padding: 4,
+        width: "100%",
+        maxWidth: 600,
+        borderRadius: 4,
+        boxShadow: 3,
+        opacity: stage === "assigning" ? 0.6 : 1,
+      }}
+    >
+      <Stack spacing={3}>
+        <Typography
+          variant="h5"
+          sx={{ fontWeight: "bold", textAlign: "center" }}
+        >
+          Confirm Your Submission
+        </Typography>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Parent Parts to Assign:
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{ marginBottom: 2, whiteSpace: "pre-line" }}
+          >
+            {parentParts}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Source Organization:
+          </Typography>
+          <Typography variant="body1" sx={{ marginBottom: 2 }}>
+            {sourceOrg}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Destination Orgs:
+          </Typography>
+          <Typography variant="body1" sx={{ marginBottom: 2 }}>
+            {destOrg}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Parts to be Processed:
+          </Typography>
+          <Typography variant="body1" sx={{ marginBottom: 2 }}>
+            {partsProcessed}
+          </Typography>
+        </Box>
+        {/* <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Mapped Items:
+          </Typography>
+          {selectedItems.length > 0 ? (
+            <Box
+              sx={{ display: "flex", flexWrap: "wrap", gap: 1, marginTop: 1 }}
+            >
+              {selectedItems.map((item) => (
+                <Chip key={item} label={item} color="primary" />
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              No items selected.
+            </Typography>
+          )}
+        </Box> */}
+        <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Button variant="contained" color="primary" onClick={onSubmit}>
+            Submit
+          </Button>
+          <Button variant="outlined" color="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+        </Stack>
+      </Stack>
+    </Paper>
+  );
+};
+
+interface ResultsScreenProps {
   parentParts: string;
   sourceOrg: string;
   selectedItems: string[];
   onBack: () => void;
 }
 
-const SubmittedDetails: React.FC<SubmittedDetailsProps> = ({
+const ResultsScreen: React.FC<ResultsScreenProps> = ({
   parentParts,
   sourceOrg,
   selectedItems,
