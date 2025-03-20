@@ -53,12 +53,19 @@ const options1: string[] = [
 const options2: string[] = [...options1];
 
 export const App: React.FC = () => {
+  // Form fields and error state
   const [parentParts, setParentParts] = useState<string>("");
   const [sourceOrg, setSourceOrg] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({
     parentParts: false,
     sourceOrg: false,
   });
+
+  // State for multi-select items (lifted from DropdownMultiSelect)
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+
+  // Track submission state to toggle view
+  const [submitted, setSubmitted] = useState<boolean>(false);
 
   const handleSubmit = (): void => {
     const newErrors: FormErrors = {
@@ -67,7 +74,8 @@ export const App: React.FC = () => {
     };
     setErrors(newErrors);
     if (!newErrors.parentParts && !newErrors.sourceOrg) {
-      console.log("Form submitted:", { parentParts, sourceOrg });
+      console.log("Form submitted:", { parentParts, sourceOrg, selectedItems });
+      setSubmitted(true);
     }
   };
 
@@ -75,6 +83,7 @@ export const App: React.FC = () => {
     setParentParts("");
     setSourceOrg("");
     setErrors({ parentParts: false, sourceOrg: false });
+    setSelectedItems([]);
     console.log("Form cancelled");
   };
 
@@ -107,59 +116,73 @@ export const App: React.FC = () => {
           minHeight: "calc(100vh - 150px)",
         }}
       >
-        <Paper
-          sx={{
-            padding: 4,
-            width: "100%",
-            maxWidth: 600,
-            borderRadius: 4,
-            boxShadow: 3,
-          }}
-        >
-          <Stack spacing={3}>
-            <TextField
-              label="Parent Parts to Assign"
-              variant="outlined"
-              value={parentParts}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setParentParts(e.target.value)
-              }
-              error={errors.parentParts}
-              helperText={errors.parentParts ? "This field is required" : ""}
-              fullWidth
-            />
-            <TextField
-              label="Source Organization"
-              variant="outlined"
-              value={sourceOrg}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setSourceOrg(e.target.value)
-              }
-              error={errors.sourceOrg}
-              helperText={errors.sourceOrg ? "This field is required" : ""}
-              fullWidth
-            />
-
-            <DropdownMultiSelect />
-
-            <Stack direction="row" spacing={2} justifyContent="flex-end">
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSubmit}
-              >
-                Submit
-              </Button>
-              <Button
+        {!submitted ? (
+          <Paper
+            sx={{
+              padding: 4,
+              width: "100%",
+              maxWidth: 600,
+              borderRadius: 4,
+              boxShadow: 3,
+            }}
+          >
+            <Stack spacing={3}>
+              <TextField
+                label="Parent Parts to Assign"
+                multiline
+                rows={4}
                 variant="outlined"
-                color="secondary"
-                onClick={handleCancel}
-              >
-                Cancel
-              </Button>
+                value={parentParts}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setParentParts(e.target.value)
+                }
+                error={errors.parentParts}
+                helperText={errors.parentParts ? "This field is required" : ""}
+                fullWidth
+              />
+              <TextField
+                label="Source Organization"
+                variant="outlined"
+                value={sourceOrg}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setSourceOrg(e.target.value)
+                }
+                error={errors.sourceOrg}
+                helperText={errors.sourceOrg ? "This field is required" : ""}
+                fullWidth
+              />
+
+              <DropdownMultiSelect
+                selectedItems={selectedItems}
+                onChange={setSelectedItems}
+              />
+
+              <Stack direction="row" spacing={2} justifyContent="flex-end">
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSubmit}
+                >
+                  Submit
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
+              </Stack>
             </Stack>
-          </Stack>
-        </Paper>
+          </Paper>
+        ) : (
+          <SubmittedDetails
+            parentParts={parentParts}
+            sourceOrg={sourceOrg}
+            selectedItems={selectedItems}
+            onBack={() => setSubmitted(false)}
+          />
+        )}
       </Box>
     </Box>
   );
@@ -167,8 +190,15 @@ export const App: React.FC = () => {
 
 export default App;
 
-const DropdownMultiSelect: React.FC = () => {
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+interface DropdownProps {
+  selectedItems: string[];
+  onChange: (items: string[]) => void;
+}
+
+const DropdownMultiSelect: React.FC<DropdownProps> = ({
+  selectedItems,
+  onChange,
+}) => {
   const [firstDropdownSelected, setFirstDropdownSelected] =
     useState<boolean>(false);
 
@@ -177,7 +207,7 @@ const DropdownMultiSelect: React.FC = () => {
     dropdownType: "first" | "second"
   ): void => {
     if (newValue && !selectedItems.includes(newValue)) {
-      setSelectedItems([...selectedItems, newValue]);
+      onChange([...selectedItems, newValue]);
     }
     if (dropdownType === "first" && newValue) {
       setFirstDropdownSelected(true);
@@ -185,7 +215,7 @@ const DropdownMultiSelect: React.FC = () => {
   };
 
   const handleDelete = (itemToDelete: string): void => {
-    setSelectedItems(selectedItems.filter((item) => item !== itemToDelete));
+    onChange(selectedItems.filter((item) => item !== itemToDelete));
   };
 
   return (
@@ -241,5 +271,80 @@ const DropdownMultiSelect: React.FC = () => {
         </Box>
       </Paper>
     </Box>
+  );
+};
+
+interface SubmittedDetailsProps {
+  parentParts: string;
+  sourceOrg: string;
+  selectedItems: string[];
+  onBack: () => void;
+}
+
+const SubmittedDetails: React.FC<SubmittedDetailsProps> = ({
+  parentParts,
+  sourceOrg,
+  selectedItems,
+  onBack,
+}) => {
+  return (
+    <Paper
+      sx={{
+        padding: 4,
+        width: "100%",
+        maxWidth: 600,
+        borderRadius: 4,
+        boxShadow: 4,
+      }}
+    >
+      <Stack spacing={3}>
+        <Typography
+          variant="h5"
+          sx={{ fontWeight: "bold", textAlign: "center" }}
+        >
+          Submitted Details
+        </Typography>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Parent Parts to Assign:
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{ marginBottom: 2, whiteSpace: "pre-line" }}
+          >
+            {parentParts}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Source Organization:
+          </Typography>
+          <Typography variant="body1" sx={{ marginBottom: 2 }}>
+            {sourceOrg}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
+            Mapped Items:
+          </Typography>
+          {selectedItems.length > 0 ? (
+            <Box
+              sx={{ display: "flex", flexWrap: "wrap", gap: 1, marginTop: 1 }}
+            >
+              {selectedItems.map((item) => (
+                <Chip key={item} label={item} color="primary" />
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              No items selected.
+            </Typography>
+          )}
+        </Box>
+        <Button variant="outlined" color="primary" onClick={onBack}>
+          Back to Form
+        </Button>
+      </Stack>
+    </Paper>
   );
 };
