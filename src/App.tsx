@@ -86,7 +86,8 @@ export const App: React.FC = () => {
 
   // --- Searching Stage ---
   useEffect(() => {
-    let timer: any;
+    let timer: NodeJS.Timeout;
+
     if (stage === "searching") {
       timer = setTimeout(() => {
         setStage("confirmation");
@@ -112,7 +113,8 @@ export const App: React.FC = () => {
 
   // --- Assigning Stage ---
   useEffect(() => {
-    let timer: any;
+    let timer: NodeJS.Timeout;
+
     if (stage === "assigning") {
       timer = setTimeout(() => {
         setStage("results");
