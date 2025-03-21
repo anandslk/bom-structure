@@ -276,7 +276,7 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
 
   const handleSelect = (
     newValue: string | null,
-    dropdownType: "first" | "second"
+    dropdownType: "first" | "second",
   ): void => {
     if (newValue && !selectedItems.includes(newValue)) {
       onChange([...selectedItems, newValue]);
