@@ -302,7 +302,7 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
         renderInput={(params) => (
           <TextField
             {...params}
-            label="JDI RDO List"
+            label="JDI RDO List (will appear in Selected Plants)"
             fullWidth
             variant="outlined"
             disabled={disabled}
@@ -315,13 +315,19 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
         renderInput={(params) => (
           <TextField
             {...params}
-            label="Select an Org"
+            label="Select an Org (will appear in Selected Plants)"
             fullWidth
             variant="outlined"
             disabled={disabled || !firstDropdownSelected}
           />
         )}
       />
+
+      {/* Helper text indicating both selections will be shown */}
+      <Typography variant="caption" color="textSecondary">
+        Selections from both fields will appear below.
+      </Typography>
+
       <Paper
         sx={{
           padding: 2,
@@ -331,10 +337,14 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
           overflowY: "auto",
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+        <Typography
+          variant="subtitle1"
+          sx={{ fontWeight: "bold", marginBottom: 2 }}
+        >
           Selected Plants
         </Typography>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, minHeight: 20 }}>
           {selectedItems.map((item) => (
             <Chip
               key={item}
