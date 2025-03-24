@@ -14,184 +14,67 @@ import {
 import { LoadingScreen } from "./components/LoadingScreen";
 import { ConfirmationScreen } from "./components/Confirmation";
 import { ResultsScreen } from "./components/Result";
+import { Dialog } from "./components/Dialog";
+import { useConfirmations } from "./hooks/useConfirmations";
+import {
+  useOrgListQuery,
+  usePostMutation,
+  useRdoListQuery,
+} from "./slices/apis/app.api";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "./slices/apis/types";
 
 interface FormErrors {
-  parentParts: boolean;
-  sourceOrg: boolean;
+  parentParts?: string;
+  sourceOrg?: string;
 }
-
-const RDOList: string[] = [
-  "FSA",
-  "AO1",
-  "MIA",
-  "VLO",
-  "MEE",
-  "AT1",
-  "AZ5",
-  "BES",
-  "SOC",
-  "EWK",
-  "STG",
-  "PDS",
-  "CG1",
-  "HRS",
-  "CZ1",
-  "DK1",
-  "EY1",
-  "FS1",
-  "FRS",
-  "GA1",
-  "DE1",
-  "GB1",
-  "HAC",
-  "IQ1",
-  "IE1",
-  "ITS",
-  "JPS",
-  "SEE",
-  "KW1",
-  "SBD",
-  "SBG",
-  "CDC",
-  "EDO",
-  "HJH",
-  "LRD",
-  "VHS",
-  "RGA",
-  "MO1",
-  "NL1",
-  "NZE",
-  "NG1",
-  "LKS",
-  "LIM",
-  "PMI",
-  "PS0",
-  "PT1",
-  "QA1",
-  "RUS",
-  "RO1",
-  "SA1",
-  "DTV",
-  "SG3",
-  "SGC",
-  "SGD",
-  "SK1",
-  "ES1",
-  "SE1",
-  "CHS",
-  "AY5",
-  "RAE",
-  "TRS",
-  "AD1",
-  "DX1",
-  "HCE",
-];
-
-const orgList: string[] = [
-  "AD1",
-  "AO1",
-  "AT1",
-  "AY5",
-  "AZ5",
-  "BES",
-  "CDC",
-  "CHS",
-  "CG1",
-  "CST",
-  "CZ1",
-  "DE1",
-  "DES",
-  "DK1",
-  "DTV",
-  "DX1",
-  "EDO",
-  "ES1",
-  "EWK",
-  "EY1",
-  "FRS",
-  "FS1",
-  "FSA",
-  "GA1",
-  "GB1",
-  "GB5",
-  "HAC",
-  "HCE",
-  "HJH",
-  "HRS",
-  "IE1",
-  "IES",
-  "IQ1",
-  "ITS",
-  "JPS",
-  "KW1",
-  "LIM",
-  "LKS",
-  "LRD",
-  "MEE",
-  "MIA",
-  "MO1",
-  "NG1",
-  "NL1",
-  "NS1",
-  "NZE",
-  "PDS",
-  "PMI",
-  "PS0",
-  "PT1",
-  "QA1",
-  "RAE",
-  "RGA",
-  "RO1",
-  "RUS",
-  "S04",
-  "S05",
-  "S08",
-  "S13",
-  "SA1",
-  "SBD",
-  "SBG",
-  "SE1",
-  "SEE",
-  "SG3",
-  "SGC",
-  "SGD",
-  "SJN",
-  "SK1",
-  "SOC",
-  "SOR",
-  "STG",
-  "TOR",
-  "TRS",
-  "VHS",
-  "VLO",
-];
 
 type Stage = "form" | "searching" | "confirmation" | "assigning" | "results";
 
 export const App: React.FC = () => {
   // Form fields and error state
-  const [parentParts, setParentParts] = useState<string>("");
-  const [sourceOrg, setSourceOrg] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({
-    parentParts: false,
-    sourceOrg: false,
+    parentParts: "",
+    sourceOrg: "",
   });
 
-  // State for multi-select items
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  type IFormState = {
+    parentParts: string;
+    sourceOrg: string;
+    plants: string[];
+  };
+
+  const [formState, setFormState] = useState<IFormState>({
+    parentParts: "",
+    sourceOrg: "",
+    plants: [],
+  });
+
+  const handleChange = (
+    key: keyof IFormState,
+    value: IFormState[keyof IFormState]
+  ) => {
+    setFormState((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const { setIsOpen } = useConfirmations();
 
   // Track submission stage
   const [stage, setStage] = useState<Stage>("form");
 
   // --- Form Submission ---
   const handleFormSubmit = (): void => {
-    const newErrors: FormErrors = {
-      parentParts: parentParts.trim() === "",
-      sourceOrg: sourceOrg.trim() === "",
-    };
+    const newErrors: FormErrors = {};
+
+    if (!formState.parentParts.trim())
+      newErrors.parentParts = "Parent Part is required";
+    if (!formState.sourceOrg.trim())
+      newErrors.sourceOrg = "Source org is required";
+
     setErrors(newErrors);
-    if (!newErrors.parentParts && !newErrors.sourceOrg) {
-      setStage("searching");
+
+    if (Object.keys(newErrors).length === 0) {
+      setIsOpen(true);
     }
   };
 
@@ -209,17 +92,23 @@ export const App: React.FC = () => {
 
   // --- Cancel Handler ---
   const handleCancel = (): void => {
-    setParentParts("");
-    setSourceOrg("");
-    setErrors({ parentParts: false, sourceOrg: false });
-    setSelectedItems([]);
-    setStage("form");
-    console.log("Process cancelled");
+    setIsOpen(false);
   };
 
+  const [postMutation, { isLoading }] = usePostMutation();
+
   // --- Confirmation Stage ---
-  const handleConfirmationSubmit = (): void => {
-    setStage("assigning");
+  const handleConfirmationSubmit = async () => {
+    const { data, error } = await postMutation({
+      parentPart: formState.parentParts,
+      sourceOrg: formState.sourceOrg,
+      plants: formState.plants,
+    });
+
+    if (error) toast.error(getErrorMessage(error));
+
+    setIsOpen(false);
+    toast.success(data.message);
   };
 
   // --- Assigning Stage ---
@@ -230,14 +119,14 @@ export const App: React.FC = () => {
       timer = setTimeout(() => {
         setStage("results");
         console.log("Final submission:", {
-          parentParts,
-          sourceOrg,
-          selectedItems,
+          parentParts: formState.parentParts,
+          sourceOrg: formState.sourceOrg,
+          selectedItems: formState.plants,
         });
       }, 2000);
     }
     return () => clearTimeout(timer);
-  }, [stage, parentParts, sourceOrg, selectedItems]);
+  }, [stage, formState.parentParts, formState.sourceOrg, formState.plants]);
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#eef2f6" }}>
@@ -258,6 +147,22 @@ export const App: React.FC = () => {
           </Typography>
         </Toolbar>
       </AppBar>
+
+      <Dialog
+        title="Confirm Your Submission"
+        onSubmit={handleConfirmationSubmit}
+        onCancel={handleCancel}
+        disabled={isLoading}
+      >
+        <ConfirmationScreen
+          stage={stage}
+          parentParts={formState.parentParts}
+          sourceOrg={formState.sourceOrg}
+          destOrg="AY5"
+          partsProcessed="575757-676"
+          selectedItems={formState.plants}
+        />
+      </Dialog>
 
       <Box
         sx={{
@@ -290,31 +195,33 @@ export const App: React.FC = () => {
               <TextField
                 label="Parent Parts to Assign"
                 variant="outlined"
-                value={parentParts}
+                value={formState.parentParts}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setParentParts(e.target.value)
+                  handleChange("parentParts", e.target.value)
                 }
-                error={errors.parentParts}
-                helperText={errors.parentParts ? "This field is required" : ""}
+                error={!!errors.parentParts}
+                helperText={errors.parentParts}
                 fullWidth
                 disabled={stage === "searching"}
               />
               <TextField
                 label="Source Organization"
                 variant="outlined"
-                value={sourceOrg}
+                value={formState.sourceOrg}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setSourceOrg(e.target.value)
+                  handleChange("sourceOrg", e.target.value)
                 }
-                error={errors.sourceOrg}
-                helperText={errors.sourceOrg ? "This field is required" : ""}
+                error={!!errors.sourceOrg}
+                helperText={errors.sourceOrg}
                 fullWidth
                 disabled={stage === "searching"}
               />
 
               <DropdownMultiSelect
-                selectedItems={selectedItems}
-                onChange={setSelectedItems}
+                selectedItems={formState.plants}
+                onChange={(newSelectedItems) =>
+                  handleChange("plants", newSelectedItems)
+                }
                 disabled={stage === "searching"}
               />
 
@@ -349,22 +256,22 @@ export const App: React.FC = () => {
         {(stage === "confirmation" || stage === "assigning") && (
           <ConfirmationScreen
             stage={stage}
-            parentParts={parentParts}
-            sourceOrg={sourceOrg}
+            parentParts={formState.parentParts}
+            sourceOrg={formState.sourceOrg}
             destOrg="AY5"
             partsProcessed="575757-676"
-            selectedItems={selectedItems}
-            onSubmit={handleConfirmationSubmit}
-            onCancel={handleCancel}
+            selectedItems={formState.plants}
+            // onSubmit={handleConfirmationSubmit}
+            // onCancel={handleCancel}
           />
         )}
 
         {/* Results Screen */}
         {stage === "results" && (
           <ResultsScreen
-            parentParts={parentParts}
-            sourceOrg={sourceOrg}
-            selectedItems={selectedItems}
+            parentParts={formState.parentParts}
+            sourceOrg={formState.sourceOrg}
+            selectedItems={formState.plants}
             onBack={handleCancel}
           />
         )}
@@ -386,32 +293,26 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
   onChange,
   disabled,
 }) => {
-  const [firstDropdownSelected, setFirstDropdownSelected] =
-    useState<boolean>(false);
-
-  const handleSelect = (
-    newValue: string | null,
-    dropdownType: "first" | "second",
-  ): void => {
-    if (newValue && !selectedItems.includes(newValue)) {
+  const handleSelect = (newValue: string | null): void => {
+    if (newValue && !selectedItems?.includes(newValue)) {
       onChange([...selectedItems, newValue]);
-    }
-    if (dropdownType === "first" && newValue) {
-      setFirstDropdownSelected(true);
     }
   };
 
   const handleDelete = (itemToDelete: string): void => {
-    onChange(selectedItems.filter((item) => item !== itemToDelete));
+    onChange(selectedItems?.filter((item) => item !== itemToDelete));
   };
+
+  const { data: rdoList } = useRdoListQuery({});
+  const { data: orgList } = useOrgListQuery({});
 
   return (
     <Box
       sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 2 }}
     >
       <Autocomplete
-        options={RDOList}
-        onChange={(_, newValue) => handleSelect(newValue, "first")}
+        options={rdoList?.data ?? []}
+        onChange={(_, newValue) => handleSelect(newValue as string)}
         renderInput={(params) => (
           <TextField
             {...params}
@@ -423,15 +324,15 @@ const DropdownMultiSelect: React.FC<DropdownProps> = ({
         )}
       />
       <Autocomplete
-        options={orgList}
-        onChange={(_, newValue) => handleSelect(newValue, "second")}
+        options={orgList?.data ?? []}
+        onChange={(_, newValue) => handleSelect(newValue as string)}
         renderInput={(params) => (
           <TextField
             {...params}
             label="Select an Org (will appear in Selected Plants)"
             fullWidth
             variant="outlined"
-            disabled={disabled || !firstDropdownSelected}
+            disabled={disabled}
           />
         )}
       />

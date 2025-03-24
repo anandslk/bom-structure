@@ -1,4 +1,4 @@
-import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 
 interface ConfirmationScreenProps {
   stage: string;
@@ -7,22 +7,19 @@ interface ConfirmationScreenProps {
   destOrg: string;
   partsProcessed: string;
   selectedItems: string[];
-  onSubmit: () => void;
-  onCancel: () => void;
 }
 
 export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
   parentParts,
   sourceOrg,
 
-  onSubmit,
-  onCancel,
-  stage,
+  // stage,
   destOrg,
   partsProcessed,
 }) => {
   return (
-    <Paper
+    <>
+      {/* <Paper
       sx={{
         padding: 4,
         width: "100%",
@@ -33,12 +30,14 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
       }}
     >
       <Stack spacing={3}>
-        <Typography
-          variant="h5"
-          sx={{ fontWeight: "bold", textAlign: "center" }}
-        >
-          Confirm Your Submission
-        </Typography>
+      <Typography
+      variant="h5"
+      sx={{ fontWeight: "bold", textAlign: "center" }}
+      >
+      Confirm Your Submission
+        </Typography> */}
+
+      <Stack spacing={3}>
         <Box>
           <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
             Parent Parts to Assign:
@@ -80,7 +79,7 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
             </Typography>
             {selectedItems.length > 0 ? (
               <Box
-                sx={{ display: "flex", flexWrap: "wrap", gap: 1, marginTop: 1 }}
+                sx={{ display: "flex", flexWrap: "wrap", gap: 1, marginTop: 1 }}l
               >
                 {selectedItems.map((item) => (
                   <Chip key={item} label={item} color="primary" />
@@ -92,15 +91,28 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({
               </Typography>
             )}
           </Box> */}
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
-          <Button variant="contained" color="primary" onClick={onSubmit}>
-            Submit
+        {/* <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={onSubmit}
+            disabled={isLoading}
+          >
+            Confirm
           </Button>
-          <Button variant="outlined" color="secondary" onClick={onCancel}>
+
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => setIsOpen(false)}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
-        </Stack>
+        </Stack> */}
       </Stack>
-    </Paper>
+      {/* </Stack>
+    </Paper> */}
+    </>
   );
 };

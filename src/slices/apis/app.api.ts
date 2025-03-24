@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { createMutationQuery, headers } from "./config";
+import { createGetQuery, createMutationQuery, headers } from "./config";
 import { env } from "src/utils/env";
-import { ISigninArgs, ISignupArgs } from "./types";
+import { IPostArgs } from "./types";
 
 export const apiSlice = createApi({
   reducerPath: "api",
@@ -12,11 +12,13 @@ export const apiSlice = createApi({
   }),
 
   endpoints: (builder) => ({
-    signin: builder.mutation(createMutationQuery<ISigninArgs>("/signin")),
-    signup: builder.mutation<void, ISignupArgs>(createMutationQuery("/signup")),
+    post: builder.mutation(createMutationQuery<IPostArgs>("/")),
+    // rdoList: builder.query<IRDOListRes, void>(createGetQuery("/rdo-list")),
+    rdoList: builder.query(createGetQuery("/rdo-list")),
+    orgList: builder.query(createGetQuery("/org-list")),
   }),
 });
 
-export const { useSignupMutation, useSigninMutation } = apiSlice;
+export const { usePostMutation, useRdoListQuery, useOrgListQuery } = apiSlice;
 
 export const {} = apiSlice;

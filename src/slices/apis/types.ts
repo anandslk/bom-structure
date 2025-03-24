@@ -48,18 +48,14 @@ export interface ISigninRes {
   };
 }
 
-export interface ISigninArgs {
-  email: string;
-  password: string;
+export interface IPostArgs {
+  parentPart: string;
+  sourceOrg: string;
+  plants: string[];
 }
 
-export interface ISignupArgs {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  gender: string;
-  dob: string;
-  phone: string;
-  type: string;
+export interface IRDOListRes {
+  status: number;
+  message: string;
+  data: string[];
 }
